@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="fr">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Détection de Phishing - XGBoost</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <style>
+      body {
+        font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
+          sans-serif;
+        background: #f5f7fb;
+        margin: 0;
+        padding: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        min-height: 100vh;
+      }
+      .card {
+        background: #ffffff;
+        box-shadow: 0 10px 25px rgba(0, 0, 0, 0.08);
+        border-radius: 12px;
+        padding: 24px 28px;
+        max-width: 600px;
+        width: 100%;
+      }
+      h1 {
+        margin-top: 0;
+        font-size: 1.5rem;
+        text-align: center;
+      }
+      p.subtitle {
+        margin-top: 0;
+        margin-bottom: 20px;
+        font-size: 0.95rem;
+        color: #555;
+        text-align: center;
+      }
+      form {
+        display: flex;
+        gap: 8px;
+        margin-bottom: 16px;
+      }
+      input[type="text"] {
+        flex: 1;
+        padding: 10px 12px;
+        border-radius: 8px;
+        border: 1px solid #d0d4e4;
+        font-size: 0.95rem;
+      }
+      button {
+        padding: 10px 16px;
+        border-radius: 8px;
+        border: none;
+        background: #2563eb;
+        color: white;
+        font-weight: 600;
+        cursor: pointer;
+      }
+      button:hover {
+        background: #1d4ed8;
+      }
+      .result,
+      .error {
+        padding: 12px 14px;
+        border-radius: 8px;
+        font-size: 0.95rem;
+        margin-top: 4px;
+      }
+      .result-safe {
+        background: #ecfdf3;
+        color: #166534;
+        border: 1px solid #bbf7d0;
+      }
+      .result-danger {
+        background: #fef2f2;
+        color: #b91c1c;
+        border: 1px solid #fecaca;
+      }
+      .error {
+        background: #fef3c7;
+        color: #92400e;
+        border: 1px solid #fde68a;
+      }
+      .small {
+        font-size: 0.85rem;
+        color: #6b7280;
+        margin-top: 8px;
+      }
+      code {
+        background: #f3f4f6;
+        padding: 2px 4px;
+        border-radius: 4px;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="card">
+      <h1>Détection de sites de phishing</h1>
+      <p class="subtitle">
+        Modèle XGBoost entraîné sur des caractéristiques d'URL et de page HTML.
+      </p>
+
+      <form action="/predict" method="post">
+        <input
+          type="text"
+          name="url"
+          placeholder="Entrez une URL (ex: https://www.monsite.com)"
+          value="{{ url_value }}"
+        />
+        <button type="submit">Analyser</button>
+      </form>
+
+      {% if error %}
+      <div class="error">{{ error }}</div>
+      {% endif %}
+
+      {% if result %}
+      <div
+        class="result {% if result.prediction == 1 %}result-danger{% else %}result-safe{% endif %}"
+      >
+        <strong>Résultat :</strong>
+        {% if result.prediction == 1 %}
+        Ce site est probablement
+        <strong>phishing</strong>.
+        {% else %}
+        Ce site semble
+        <strong>légitime</strong>.
+        {% endif %}
+        <br />
+        <span class="small">
+          Sortie du modèle :
+          <code>{{ result.prediction }}</code>
+          (0 = légitime, 1 = phishing) &mdash;
+          Probabilité phishing ≈
+          <code>{{ '%.2f'|format(result.probability * 100) }}%</code>
+        </span>
+      </div>
+      {% endif %}
+    </div>
+  </body>
+  </html>
+
+
