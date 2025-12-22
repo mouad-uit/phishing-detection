@@ -4,6 +4,7 @@
     <meta charset="UTF-8" />
     <title>Détection de Phishing - XGBoost</title>
     <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='favicon.svg') }}" />
     <style>
       body {
         font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
@@ -57,8 +58,75 @@
         font-weight: 600;
         cursor: pointer;
       }
-      button:hover {
+      button:hover:not(:disabled) {
         background: #1d4ed8;
+      }
+      button:disabled {
+        background: #9ca3af;
+        cursor: not-allowed;
+        opacity: 0.7;
+      }
+      input:disabled,
+      input[readonly] {
+        background: #f3f4f6;
+        cursor: not-allowed;
+        opacity: 0.7;
+      }
+      .loading-container {
+        display: none;
+        text-align: center;
+        padding: 12px;
+        margin-top: 8px;
+      }
+      .loading-container.active {
+        display: block;
+      }
+      .spinner {
+        display: inline-block;
+        width: 20px;
+        height: 20px;
+        border: 3px solid #f3f4f6;
+        border-top-color: #2563eb;
+        border-radius: 50%;
+        animation: spin 0.8s linear infinite;
+      }
+      @keyframes spin {
+        to {
+          transform: rotate(360deg);
+        }
+      }
+      .loading-text {
+        margin-left: 8px;
+        color: #6b7280;
+        font-size: 0.9rem;
+      }
+      .validation-error {
+        display: none;
+        color: #b91c1c;
+        font-size: 0.85rem;
+        margin-top: 4px;
+        padding: 6px 8px;
+        background: #fef2f2;
+        border: 1px solid #fecaca;
+        border-radius: 6px;
+      }
+      .validation-error.active {
+        display: block;
+      }
+      input.invalid {
+        border-color: #b91c1c;
+        background: #fef2f2;
+      }
+      input.valid {
+        border-color: #10b981;
+      }
+      #errorContainer,
+      #resultContainer {
+        margin-top: 8px;
+      }
+      #errorContainer .error,
+      #resultContainer .result {
+        margin-top: 0;
       }
       .result,
       .error {
@@ -101,43 +169,201 @@
         Modèle XGBoost entraîné sur des caractéristiques d'URL et de page HTML.
       </p>
 
-      <form action="/predict" method="post">
+      <form id="predictForm">
         <input
           type="text"
           name="url"
+          id="urlInput"
           placeholder="Entrez une URL (ex: https://www.monsite.com)"
-          value="{{ url_value }}"
+          required
         />
-        <button type="submit">Analyser</button>
+        <button type="submit" id="submitBtn">Analyser</button>
       </form>
 
-      {% if error %}
-      <div class="error">{{ error }}</div>
-      {% endif %}
+      <div class="validation-error" id="validationError"></div>
 
-      {% if result %}
-      <div
-        class="result {% if result.prediction == 1 %}result-danger{% else %}result-safe{% endif %}"
-      >
-        <strong>Résultat :</strong>
-        {% if result.prediction == 1 %}
-        Ce site est probablement
-        <strong>phishing</strong>.
-        {% else %}
-        Ce site semble
-        <strong>légitime</strong>.
-        {% endif %}
-        <br />
-        <span class="small">
-          Sortie du modèle :
-          <code>{{ result.prediction }}</code>
-          (0 = légitime, 1 = phishing) &mdash;
-          Probabilité phishing ≈
-          <code>{{ '%.2f'|format(result.probability * 100) }}%</code>
-        </span>
+      <div class="loading-container" id="loadingContainer">
+        <div style="display: flex; align-items: center; justify-content: center;">
+          <div class="spinner"></div>
+          <span class="loading-text">Analyse en cours...</span>
+        </div>
       </div>
-      {% endif %}
+
+      <!-- Container for error messages -->
+      <div id="errorContainer"></div>
+
+      <!-- Container for results -->
+      <div id="resultContainer"></div>
     </div>
+
+    <script>
+      const form = document.getElementById("predictForm");
+      const urlInput = document.getElementById("urlInput");
+      const submitBtn = document.getElementById("submitBtn");
+      const loadingContainer = document.getElementById("loadingContainer");
+      const validationError = document.getElementById("validationError");
+      const errorContainer = document.getElementById("errorContainer");
+      const resultContainer = document.getElementById("resultContainer");
+
+      // URL validation function
+      function isValidURL(url) {
+        if (!url || url.trim() === "") {
+          return { valid: false, message: "Veuillez saisir une URL." };
+        }
+
+        const trimmedUrl = url.trim();
+        
+        // Basic URL pattern check
+        const urlPattern = /^(https?:\/\/)?([\da-z\.-]+)\.([a-z\.]{2,6})([\/\w \.-]*)*\/?$/i;
+        const ipPattern = /^(https?:\/\/)?(\d{1,3}\.){3}\d{1,3}(:\d+)?([\/\w \.-]*)*\/?$/;
+        
+        // Check if it's a valid URL format
+        try {
+          // Try to create a URL object (works for full URLs)
+          if (trimmedUrl.includes("://")) {
+            new URL(trimmedUrl);
+            return { valid: true, message: "" };
+          } else {
+            // For URLs without protocol, check if it looks like a domain
+            if (urlPattern.test(trimmedUrl) || ipPattern.test(trimmedUrl)) {
+              return { valid: true, message: "" };
+            } else {
+              return { valid: false, message: "Format d'URL invalide. Exemple: https://www.example.com" };
+            }
+          }
+        } catch (e) {
+          return { valid: false, message: "Format d'URL invalide. Exemple: https://www.example.com" };
+        }
+      }
+
+      // Display error message
+      function displayError(message) {
+        errorContainer.innerHTML = `<div class="error">${message}</div>`;
+        resultContainer.innerHTML = "";
+      }
+
+      // Display result
+      function displayResult(result) {
+        const isPhishing = result.prediction === 1;
+        const resultClass = isPhishing ? "result-danger" : "result-safe";
+        const resultText = isPhishing 
+          ? "Ce site est probablement <strong>phishing</strong>."
+          : "Ce site semble <strong>légitime</strong>.";
+        const probability = (result.probability * 100).toFixed(2);
+
+        resultContainer.innerHTML = `
+          <div class="result ${resultClass}">
+            <strong>Résultat :</strong>
+            ${resultText}
+            <br />
+            <span class="small">
+              Sortie du modèle :
+              <code>${result.prediction}</code>
+              (0 = légitime, 1 = phishing) &mdash;
+              Probabilité phishing ≈
+              <code>${probability}%</code>
+            </span>
+          </div>
+        `;
+        errorContainer.innerHTML = "";
+      }
+
+      // Real-time validation on input
+      urlInput.addEventListener("input", function () {
+        const urlValue = urlInput.value.trim();
+        const validation = isValidURL(urlValue);
+        
+        if (urlValue === "") {
+          urlInput.classList.remove("invalid", "valid");
+          validationError.classList.remove("active");
+        } else if (validation.valid) {
+          urlInput.classList.remove("invalid");
+          urlInput.classList.add("valid");
+          validationError.classList.remove("active");
+        } else {
+          urlInput.classList.remove("valid");
+          urlInput.classList.add("invalid");
+          validationError.textContent = validation.message;
+          validationError.classList.add("active");
+        }
+      });
+
+      // Validate on blur (when user leaves the input)
+      urlInput.addEventListener("blur", function () {
+        const urlValue = urlInput.value.trim();
+        const validation = isValidURL(urlValue);
+        
+        if (!validation.valid && urlValue !== "") {
+          urlInput.classList.add("invalid");
+          validationError.textContent = validation.message;
+          validationError.classList.add("active");
+        }
+      });
+
+      form.addEventListener("submit", async function (e) {
+        e.preventDefault(); // Prevent default form submission
+
+        // Validate URL before submission
+        const urlValue = urlInput.value.trim();
+        const validation = isValidURL(urlValue);
+        
+        if (!validation.valid) {
+          urlInput.classList.add("invalid");
+          validationError.textContent = validation.message;
+          validationError.classList.add("active");
+          urlInput.focus();
+          return false;
+        }
+
+        // Clear any previous validation errors, results, and errors
+        urlInput.classList.remove("invalid");
+        validationError.classList.remove("active");
+        errorContainer.innerHTML = "";
+        resultContainer.innerHTML = "";
+
+        // Disable input and button, show loading
+        urlInput.readOnly = true;
+        submitBtn.disabled = true;
+        loadingContainer.classList.add("active");
+
+        try {
+          // Send AJAX request to backend
+          const response = await fetch("/predict", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({ url: urlValue }),
+          });
+
+          const data = await response.json();
+
+          if (data.success) {
+            displayResult(data.result);
+          } else {
+            displayError(data.error || "Une erreur est survenue.");
+          }
+        } catch (error) {
+          displayError(`Erreur de connexion : ${error.message}`);
+        } finally {
+          // Re-enable input and button, hide loading
+          urlInput.readOnly = false;
+          submitBtn.disabled = false;
+          loadingContainer.classList.remove("active");
+        }
+      });
+
+      // Reset form state on page load
+      window.addEventListener("load", function () {
+        urlInput.readOnly = false;
+        submitBtn.disabled = false;
+        loadingContainer.classList.remove("active");
+        urlInput.classList.remove("invalid", "valid");
+        validationError.classList.remove("active");
+        errorContainer.innerHTML = "";
+        resultContainer.innerHTML = "";
+      });
+    </script>
   </body>
   </html>
 

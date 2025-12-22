@@ -4,6 +4,7 @@ from typing import Dict, List, Optional
 
 from urllib.parse import urlparse
 
+import numpy as np
 import pandas as pd
 import requests
 from bs4 import BeautifulSoup
@@ -243,12 +244,16 @@ def build_feature_row(url: str, feature_order: List[str]) -> pd.DataFrame:
     tld = domain_info["tld"] or ""
 
     # Basic URL-related features
+    # IMPORTANT: Apply log transform to match training data distribution
+    # Training data shows URLLength as log values (e.g., 1.496434)
+    url_length_log = np.log1p(url_length)  # log(1 + x) to handle 0
+    
     # Encode TLD as numeric (deterministic: sum of character codes)
     # This converts TLD string to a consistent numeric value
     tld_encoded = float(sum(ord(c) for c in tld.lower()) if tld else 0)
     
     url_feats: Dict[str, float] = {
-        "URLLength": url_length,
+        "URLLength": url_length_log,  # Log transformed to match training
         "DomainLength": len(domain),
         "IsDomainIP": _is_ip_address(netloc),
         "TLDLength": len(tld),
@@ -265,6 +270,10 @@ def build_feature_row(url: str, feature_order: List[str]) -> pd.DataFrame:
     no_letters = counts["NoOfLettersInURL"]
     no_digits = counts["NoOfDegitsInURL"]
     no_other_special = specials["NoOfOtherSpecialCharsInURL"]
+    
+    # Apply log transform to NoOfLettersInURL to match training data
+    # Training data shows NoOfLettersInURL as log values (e.g., 1.372307)
+    counts["NoOfLettersInURL"] = np.log1p(no_letters)  # Update in counts dict
 
     letter_ratio = no_letters / url_length if url_length else 0.0
     digit_ratio = no_digits / url_length if url_length else 0.0
@@ -281,16 +290,17 @@ def build_feature_row(url: str, feature_order: List[str]) -> pd.DataFrame:
     html_feats = _extract_html_features(html)
 
     # Approximate URL/domain vs title similarity with simple overlap
+    # IMPORTANT: Training data shows scores as percentages (0-100), not ratios (0-1)
     if html_feats["Title"]:
         title_lower = html_feats["Title"].lower()
-        # Domain-title similarity
+        # Domain-title similarity (as percentage like in training data)
         common_chars = set(domain.lower()) & set(title_lower)
         denom = len(set(domain.lower())) or 1
-        domain_title_score = len(common_chars) / denom
-        # URL-title similarity
+        domain_title_score = (len(common_chars) / denom) * 100.0  # Scale to 0-100
+        # URL-title similarity (as percentage)
         common_chars_url = set(original_url.lower()) & set(title_lower)
         denom_url = len(set(original_url.lower())) or 1
-        url_title_score = len(common_chars_url) / denom_url
+        url_title_score = (len(common_chars_url) / denom_url) * 100.0  # Scale to 0-100
     else:
         domain_title_score = 0.0
         url_title_score = 0.0
@@ -299,10 +309,12 @@ def build_feature_row(url: str, feature_order: List[str]) -> pd.DataFrame:
     html_feats["URLTitleMatchScore"] = url_title_score
 
     # Default / placeholder values for complex statistical features
+    # IMPORTANT: Training data shows URLSimilarityIndex around 100.0, not 0.5!
+    # Use more realistic defaults based on training data distribution
     complex_defaults = {
-        "URLSimilarityIndex": 0.5,
-        "TLDLegitimateProb": 0.5,
-        "URLCharProb": 0.5,
+        "URLSimilarityIndex": 100.0,  # Most URLs in training have 100.0
+        "TLDLegitimateProb": 0.5,  # This seems correct based on training data
+        "URLCharProb": 0.05,  # Training data shows values around 0.05-0.06
     }
 
     # Merge all partial dictionaries into one flat feature dict
