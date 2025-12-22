@@ -1,0 +1,74 @@
+- we have a model that do a classification task of websites to detect either they are legitimate or phishing, based on URL data. We're using the XGBoost model.
+- Output : 0 or 1, 1 mean is this a phishing website and 0 mean not a phishing website ?
+- input: all the data extracted from the website wich are these: for each url the user enters I need to get this data: 
+  URLLength	DomainLength	IsDomainIP	TLDLength	NoOfSubDomain	HasObfuscation	NoOfObfuscatedChar	NoOfLettersInURL	NoOfDegitsInURL	NoOfEqualsInURL	NoOfQMarkInURL	NoOfAmpersandInURL	NoOfOtherSpecialCharsInURL	IsHTTPS	LineOfCode	LargestLineLength	HasTitle	HasFavicon	Robots	IsResponsive	NoOfURLRedirect	NoOfSelfRedirect	HasDescription	NoOfPopup	NoOfiFrame	HasExternalFormSubmit	HasSocialNet	HasSubmitButton	HasHiddenFields	HasPasswordField	Bank	Pay	Crypto	HasCopyrightInfo	NoOfImage	NoOfCSS	NoOfJS	NoOfSelfRef	NoOfEmptyRef	NoOfExternalRef	label	TLD	URLSimilarityIndex	CharContinuationRate	TLDLegitimateProb	URLCharProb	ObfuscationRatio	LetterRatioInURL	DegitRatioInURL	SpacialCharRatioInURL	DomainTitleMatchScore	URLTitleMatchScore
+- here is an explication of each field:
+1. Caractéristiques liées à l’URL
+· FILENAME : Nom du fichier associé à l’URL, souvent utilisé comme identifiant technique.
+· URL : L’adresse web complète.
+· URLLength : Longueur totale de l’URL ; une URL très longue est souvent suspecte.
+· Domain : Nom de domaine extrait de l’URL.
+· DomainLength : Longueur totale du domaine ; les domaines trop longs sont souvent générés
+automatiquement.
+· IsDomainIP : Indique si le domaine est une adresse IP (1) ou un nom de domaine normal (0). Les
+phishing utilisent souvent des IP pour masquer leur identité.
+· TLD : Extension du domaine (ex : .com, .net, .xyz).
+· URLSimilarityIndex : Mesure la similarité entre l’URL et une URL légitime connue, pour détecter
+les imitations.
+· CharContinuationRate : Mesure la présence de répétitions de caractères (comme “aaa”, “////”),
+signe d’obfuscation.
+· TLDLegitimateProb : Probabilité que le TLD corresponde à un domaine fiable.
+· URLCharProb : Score indiquant si les caractères de l’URL ressemblent à ceux que l’on retrouve
+dans une URL normale.
+· TLDLength : Longueur de l’extension du domaine.
+· NoOfSubDomain : Nombre de sous-domaines présents dans l’URL.
+· HasObfuscation : Indique si l’URL contient des éléments d’obfuscation (encodage, caractères
+masqués…).
+· NoOfObfuscatedChar : Nombre total de caractères obfusqués dans l’URL.
+· ObfuscationRatio : Proportion des caractères obfusqués par rapport à la longueur totale de l’URL.
+· NoOfLettersInURL : Nombre de lettres dans l’URL.
+· LetterRatioInURL : Pourcentage de lettres dans l’URL.
+· NoOfDegitsInURL : Nombre total de chiffres dans l’URL.
+· DegitRatioInURL : Pourcentage de chiffres dans l’URL ; les URLs frauduleuses contiennent
+souvent beaucoup de chiffres.
+· NoOfEqualsInURL : Nombre de symboles « = ».
+· NoOfQMarkInURL : Nombre de symboles « ? ».
+· NoOfAmpersandInURL : Nombre de symboles « & ».
+· NoOfOtherSpecialCharsInURL : Nombre d’autres caractères spéciaux dans l’URL.
+· SpacialCharRatioInURL : Proportion totale de caractères spéciaux.
+· IsHTTPS : Indique si l’URL utilise le protocole HTTPS ou non.
+2. Caractéristiques liées au code source HTML de la page
+· LineOfCode : Nombre total de lignes dans le code source ; les pages phishing sont souvent très
+simples et limitées.
+· LargestLineLength : Longueur de la plus grande ligne du code source.
+· HasTitle : Indique la présence d'une balise <title>.
+· Title : Contenu textuel du titre de la page.
+· DomainTitleMatchScore : Score de similarité entre le domaine et le titre.
+· URLTitleMatchScore : Similarité entre l’URL et le titre de la page.
+· HasFavicon : Indique si un favicon est présent.
+· Robots : Présence d’un fichier robots.txt.
+· IsResponsive : Indique si la page est responsive ; les pages légitimes le sont généralement.
+· NoOfURLRedirect : Nombre total de redirections effectuées par la page.
+· NoOfSelfRedirect : Redirections vers la même URL.
+· HasDescription : Présence d’une meta description.
+· NoOfPopup : Nombre de pop-ups détectés sur la page.
+· NoOfiFrame : Nombre de balises <iframe>, souvent utilisées en phishing pour masquer du
+contenu.
+· HasExternalFormSubmit : Indique si un formulaire envoie les données vers un domaine externe
+(typique du vol d’identifiants).
+· HasSocialNet : Présence de liens vers des réseaux sociaux.
+· HasSubmitButton : Présence d’un bouton de soumission dans un formulaire.
+· HasHiddenFields : Présence de champs cachés dans la page.
+· HasPasswordField : Présence d’un champ « password » dans un formulaire.
+3. Mots clés présents dans la page
+· Bank : Présence de mots liés aux banques.
+· Pay : Présence de mots liés aux paiements.
+· Crypto : Termes liés aux cryptomonnaies.
+· HasCopyrightInfo : Indique si la page contient une mention de copyright.
+4. Statistiques d’éléments HTML
+· NoOfImage : Nombre total d’images dans la page.
+· NoOfCSS : Nombre de fichiers CSS utilisés.
+· NoOfJS : Nombre de fichiers JavaScript.
+· NoOfSelfRef : Nombre de liens internes vers le même domaine.
+· NoOfEmptyRef : Liens vides (du type « # »).
+· NoOfExternalRef : Liens vers des domaines externes. 
