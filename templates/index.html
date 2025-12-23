@@ -12,22 +12,23 @@
         background: #f5f7fb;
         margin: 0;
         padding: 0;
+        padding-top: 20px;
         display: flex;
-        align-items: center;
+        align-items: start;
         justify-content: center;
-        min-height: 100vh;
+        /* min-height: 100vh; */
       }
       .card {
         background: #ffffff;
         box-shadow: 0 10px 25px rgba(0, 0, 0, 0.08);
         border-radius: 12px;
-        padding: 24px 28px;
+        padding: 12px;
         max-width: 600px;
         width: 100%;
       }
       h1 {
-        margin-top: 0;
-        font-size: 1.5rem;
+        margin: 8px;
+        font-size: 1.25rem;
         text-align: center;
       }
       p.subtitle {
@@ -160,13 +161,60 @@
         padding: 2px 4px;
         border-radius: 4px;
       }
+      #predictForm {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+      }
+      .accordion {
+        border: 1px solid #e5e7eb;
+        border-radius: 8px;
+        margin-top: 12px;
+        overflow: hidden;
+      }
+
+      .accordion-header {
+        background: #f9fafb;
+        padding: 10px 14px;
+        cursor: pointer;
+        font-weight: 600;
+        display: flex;
+        justify-content: space-between;
+      }
+
+      .accordion-body {
+        display: none;
+        padding: 12px 14px;
+        background: #ffffff;
+        font-size: 0.9rem;
+      }
+
+      .accordion.active .accordion-body {
+        display: block;
+      }
+
+      .detail-grid {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 6px 12px;
+      }
+
+      .accordion-arrow {
+        transition: transform 0.25s ease;
+      }
+
+      .accordion.active .accordion-arrow {
+        transform: rotate(180deg);
+      }
+
     </style>
   </head>
   <body>
     <div class="card">
       <h1>Détection de sites de phishing</h1>
       <p class="subtitle">
-        Modèle XGBoost entraîné sur des caractéristiques d'URL et de page HTML.
+        Modèle XGBoost
+        <!-- Modèle XGBoost entraîné sur des caractéristiques d'URL et de page HTML. -->
       </p>
 
       <form id="predictForm">
@@ -174,7 +222,7 @@
           type="text"
           name="url"
           id="urlInput"
-          placeholder="Entrez une URL (ex: https://www.monsite.com)"
+          placeholder="Entrez un URL (https://www.monsite.com)"
           required
         />
         <button type="submit" id="submitBtn">Analyser</button>
@@ -194,6 +242,10 @@
 
       <!-- Container for results -->
       <div id="resultContainer"></div>
+
+      <!-- Container for details accordion -->
+      <div id="detailsAccordion"></div>
+
     </div>
 
     <script>
@@ -247,25 +299,54 @@
         const isPhishing = result.prediction === 1;
         const resultClass = isPhishing ? "result-danger" : "result-safe";
         const resultText = isPhishing 
-          ? "Ce site est probablement <strong>phishing</strong>."
-          : "Ce site semble <strong>légitime</strong>.";
+          ? "Ce site est probablement <strong>phishing</strong>"
+          : "Ce site semble <strong>légitime</strong>";
         const probability = (result.probability * 100).toFixed(2);
 
         resultContainer.innerHTML = `
           <div class="result ${resultClass}">
-            <strong>Résultat :</strong>
             ${resultText}
-            <br />
-            <span class="small">
-              Sortie du modèle :
-              <code>${result.prediction}</code>
-              (0 = légitime, 1 = phishing) &mdash;
+            <span> / </span>
+            <span>
               Probabilité phishing ≈
               <code>${probability}%</code>
             </span>
           </div>
         `;
         errorContainer.innerHTML = "";
+      }
+
+      function displayDetails(details) {
+        const container = document.getElementById("detailsAccordion");
+
+        const formattedJson = JSON.stringify(details, null, 2);
+
+        container.innerHTML = `
+          <div class="accordion" id="accordionBox">
+            <div class="accordion-header">
+              <span>Détails techniques du site</span>
+              <span class="accordion-arrow">▼</span>
+            </div>
+            <div class="accordion-body">
+              <pre style="
+                white-space: pre-wrap;
+                word-break: break-word;
+                background: #f3f4f6;
+                padding: 12px;
+                border-radius: 8px;
+                /* font-size: 0.85rem; */
+                max-height: 300px;
+                overflow: auto;
+              ">${formattedJson}</pre>
+            </div>
+          </div>
+        `;
+
+        document
+          .querySelector(".accordion-header")
+          .addEventListener("click", () => {
+            document.getElementById("accordionBox").classList.toggle("active");
+          });
       }
 
       // Real-time validation on input
@@ -340,6 +421,7 @@
 
           if (data.success) {
             displayResult(data.result);
+            displayDetails(data.result.details);
           } else {
             displayError(data.error || "Une erreur est survenue.");
           }

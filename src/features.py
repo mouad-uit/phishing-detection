@@ -93,16 +93,20 @@ def _compute_obfuscation(url: str) -> Dict[str, float]:
     }
 
 
-def _fetch_html(url: str) -> Optional[str]:
+def _fetch_page(url: str) -> Dict[str, Optional[str]]:
+    """
+    Fetch the page with redirects.
+    Returns dict with html, history, final_url, status_code.
+    """
     try:
         if not url.lower().startswith(("http://", "https://")):
             url = "http://" + url
-        resp = requests.get(url, timeout=5)
+        resp = requests.get(url, timeout=5, allow_redirects=True)
         if resp.status_code >= 400:
-            return None
-        return resp.text
+            return {"html": None, "history": resp.history, "final_url": resp.url, "status": resp.status_code}
+        return {"html": resp.text, "history": resp.history, "final_url": resp.url, "status": resp.status_code}
     except Exception:
-        return None
+        return {"html": None, "history": [], "final_url": None, "status": None}
 
 
 def _extract_html_features(html: Optional[str]) -> Dict[str, float]:
@@ -286,8 +290,8 @@ def build_feature_row(url: str, feature_order: List[str]) -> pd.DataFrame:
     }
 
     # HTML-based features
-    html = _fetch_html(original_url)
-    html_feats = _extract_html_features(html)
+    page = _fetch_page(original_url)
+    html_feats = _extract_html_features(page["html"])
 
     # Approximate URL/domain vs title similarity with simple overlap
     # IMPORTANT: Training data shows scores as percentages (0-100), not ratios (0-1)
@@ -317,6 +321,81 @@ def build_feature_row(url: str, feature_order: List[str]) -> pd.DataFrame:
         "URLCharProb": 0.05,  # Training data shows values around 0.05-0.06
     }
 
+    # Additional features: redirects and robots.txt
+    # Redirects
+    history = page.get("history", []) or []
+    no_redirects = len(history)
+    # Self redirects: same domain as original
+    self_redirects = 0
+    if history:
+        for h in history:
+            try:
+                h_netloc = urlparse(h.url).netloc.split(":")[0]
+                if h_netloc and h_netloc == netloc:
+                    self_redirects += 1
+            except Exception:
+                continue
+    # Robots.txt check
+    robots_flag = 0
+    try:
+        robots_resp = requests.get(f"{parsed.scheme}://{netloc}/robots.txt", timeout=3)
+        if robots_resp.status_code and robots_resp.status_code < 400:
+            robots_flag = 1
+    except Exception:
+        robots_flag = 0
+
+    # Links and forms domain analysis
+    no_self_ref = html_feats.get("NoOfSelfRef", 0)
+    no_external_ref = html_feats.get("NoOfExternalRef", 0)
+    has_external_form = html_feats.get("HasExternalFormSubmit", 0)
+
+    if html_feats.get("Title") is not None:
+        try:
+            html = page["html"]
+            if html:
+                soup = BeautifulSoup(html, "html.parser")
+                # Links
+                anchors = soup.find_all("a", href=True)
+                self_ref = 0
+                external_ref = 0
+                for a in anchors:
+                    href = a["href"]
+                    try:
+                        target = urlparse(href)
+                        target_netloc = target.netloc.split(":")[0] if target.netloc else ""
+                        if target_netloc and target_netloc == netloc:
+                            self_ref += 1
+                        elif target_netloc and target_netloc != netloc:
+                            external_ref += 1
+                    except Exception:
+                        continue
+                no_self_ref = self_ref
+                no_external_ref = external_ref
+
+                # Forms
+                forms = soup.find_all("form")
+                ext_form = 0
+                for f in forms:
+                    action = f.get("action", "")
+                    if action:
+                        target = urlparse(action)
+                        target_netloc = target.netloc.split(":")[0] if target.netloc else ""
+                        if target_netloc and target_netloc != netloc:
+                            ext_form = 1
+                            break
+                has_external_form = ext_form
+        except Exception:
+            pass
+
+    extra_feats = {
+        "NoOfURLRedirect": no_redirects,
+        "NoOfSelfRedirect": self_redirects,
+        "Robots": robots_flag,
+        "NoOfSelfRef": no_self_ref,
+        "NoOfExternalRef": no_external_ref,
+        "HasExternalFormSubmit": has_external_form,
+    }
+
     # Merge all partial dictionaries into one flat feature dict
     all_feats: Dict[str, float] = {}
     all_feats.update(url_feats)
@@ -326,6 +405,7 @@ def build_feature_row(url: str, feature_order: List[str]) -> pd.DataFrame:
     all_feats.update(ratio_feats)
     all_feats.update(html_feats)
     all_feats.update(complex_defaults)
+    all_feats.update(extra_feats)
 
     # Now create a row with all expected features
     row = {col: 0 for col in feature_order}
