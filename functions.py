@@ -5,8 +5,21 @@ import numpy as np
 import pandas as pd
 import requests
 
+from difflib import SequenceMatcher
 from urllib.parse import urlparse
 from functools import lru_cache
+
+from constants import KNOWN_LEGITIMATE_URLS
+
+
+KNOWN_LEGITIMATE_URLS = [
+    "https://www.google.com",
+    "https://www.facebook.com",
+    "https://www.amazon.com",
+    "https://www.microsoft.com",
+    "https://www.apple.com",
+    # Ajoutez d'autres domaines légitimes selon votre besoin
+]
 
 
 FEATURE_ORDER = [
@@ -80,6 +93,24 @@ def validateAndNormalizeData(request):
 # 2. FEATURE EXTRACTION
 # =========================
 
+
+def _url_similarity_index(url):
+    """
+    Compare l'URL avec la liste des URLs légitimes connues.
+    Renvoie la valeur de similarité maximale entre 0 et 1.
+    """
+    url_domain = urlparse(url).netloc.lower()
+    max_similarity = 0.0
+
+    for legit_url in KNOWN_LEGITIMATE_URLS:
+        legit_domain = urlparse(legit_url).netloc.lower()
+        similarity = SequenceMatcher(None, url_domain, legit_domain).ratio()
+        if similarity > max_similarity:
+            max_similarity = similarity
+
+    return max_similarity
+
+
 def get_url_data(url):
     parsed = urlparse(url)
     domain = parsed.netloc
@@ -108,6 +139,8 @@ def get_url_data(url):
 
     features["HasObfuscation"] = int("%" in url or "@" in url)
     features["CharContinuationRate"] = _char_continuation_rate(url)
+
+    features["URLSimilarityIndex"] = _url_similarity_index(url)
 
     # ---- Placeholder HTML features (to be improved later) ----
     html = _safe_fetch_html(url)
