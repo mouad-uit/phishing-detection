@@ -1,3 +1,38 @@
+# Liste de TLD considérés comme légitimes / très populaires
+LEGITIMATE_TLDS = {
+    "com": 1.0,
+    "org": 0.95,
+    "net": 0.9,
+    "gov": 1.0,
+    "edu": 0.95,
+    "mil": 1.0,
+    "int": 0.9,
+    "co": 0.9,
+    "io": 0.85,
+    "fr": 0.9,
+    "uk": 0.9,
+    "de": 0.9,
+    "ca": 0.9,
+    "au": 0.9,
+    "jp": 0.85,
+    "es": 0.85,
+    "it": 0.85,
+    "nl": 0.85,
+    "ru": 0.7,
+    "cn": 0.7,
+    "xyz": 0.3,
+    "top": 0.2,
+    "club": 0.4,
+    "site": 0.4,
+    "online": 0.4,
+    "info": 0.6,
+    "biz": 0.5
+    # Tu peux étendre cette liste selon tes besoins
+}
+
+
+
+
 # Liste très longue d'URLs légitimes connues pour le calcul de similarité
 KNOWN_LEGITIMATE_URLS = [
     # Moteurs de recherche

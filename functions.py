@@ -9,7 +9,7 @@ from difflib import SequenceMatcher
 from urllib.parse import urlparse
 from functools import lru_cache
 
-from constants import KNOWN_LEGITIMATE_URLS
+from constants import KNOWN_LEGITIMATE_URLS, LEGITIMATE_TLDS
 
 
 KNOWN_LEGITIMATE_URLS = [
@@ -94,6 +94,18 @@ def validateAndNormalizeData(request):
 # =========================
 
 
+
+def _tld_legitimate_prob(url):
+    """
+    Retourne la probabilité que le TLD soit légitime, entre 0 et 1.
+    Si TLD inconnu, retourne une valeur par défaut (0.5).
+    """
+    parsed = urlparse(url)
+    domain = parsed.netloc.lower()
+    tld = domain.split(".")[-1] if "." in domain else ""
+    return LEGITIMATE_TLDS.get(tld, 0.5)
+
+
 def _url_similarity_index(url):
     """
     Compare l'URL avec la liste des URLs légitimes connues.
@@ -141,6 +153,7 @@ def get_url_data(url):
     features["CharContinuationRate"] = _char_continuation_rate(url)
 
     features["URLSimilarityIndex"] = _url_similarity_index(url)
+    features["TLDLegitimateProb"] = _tld_legitimate_prob(url)
 
     # ---- Placeholder HTML features (to be improved later) ----
     html = _safe_fetch_html(url)
