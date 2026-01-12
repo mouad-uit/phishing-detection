@@ -3,7 +3,12 @@ from urllib.parse import urlparse
 
 from flask import Flask, render_template, request, jsonify
 
-from src.model import predict_url
+from functions import (
+    validateAndNormalizeData,
+    get_url_data,
+    callModel,
+    sanitize_for_json
+)
 
 
 app = Flask(__name__)
@@ -49,38 +54,26 @@ def validate_url(url: str):
 
 @app.route("/predict", methods=["POST"])
 def predict():
-    # Get JSON data from request
-    data = request.get_json()
-    if not data:
-        # Fallback to form data for compatibility
-        url = request.form.get("url", "").strip()
-    else:
-        url = data.get("url", "").strip()
-    
-    # Validate URL format
-    is_valid, error_message = validate_url(url)
-    if not is_valid:
-        return jsonify({
-            "success": False,
-            "error": error_message
-        }), 400
-
-    # Normalize URL (add protocol if missing)
-    if not url.startswith(("http://", "https://")):
-        url = "http://" + url
-
     try:
-        result = predict_url(url)
+        url = validateAndNormalizeData(request)
+        features = get_url_data(url)
+        model_result = callModel(features)
+
+        features = sanitize_for_json(features)
+
         return jsonify({
             "success": True,
-            "result": result,
-            "url": url
+            "url": url,
+            "model": model_result,
+            "features": features
         })
+
     except Exception as e:
+        print("BACKEND ERROR >>>", repr(e))
         return jsonify({
             "success": False,
-            "error": f"Erreur lors de la prédiction : {e}"
-        }), 500
+            "error": str(e)
+        }), 400
 
 
 if __name__ == "__main__":

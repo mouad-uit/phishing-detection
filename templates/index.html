@@ -419,11 +419,11 @@
 
           const data = await response.json();
 
-          if (data.success) {
-            displayResult(data.result);
-            displayDetails(data.result.details);
+          if (data.success && data.model) {
+            displayResult(data.model);
+            displayDetails(data.features);
           } else {
-            displayError(data.error || "Une erreur est survenue.");
+            displayError("Réponse invalide du serveur.");
           }
         } catch (error) {
           displayError(`Erreur de connexion : ${error.message}`);
