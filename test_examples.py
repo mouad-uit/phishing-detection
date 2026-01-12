@@ -1,15 +1,18 @@
 import pandas as pd
 
+from functions import callModel
+
+
 # Création directe du DataFrame X_test
 X_test = pd.DataFrame([
     # 0. Phishing Crypto
     {
-        'IsHTTPS': 0, 'URLLength': 95, 'IsDomainIP': 0, 'URLSimilarityIndex': 45,
+        'URLLength': 95, 'IsDomainIP': 0, 'URLSimilarityIndex': 45,
         'CharContinuationRate': 0.68, 'TLDLegitimateProb': 0.15, 'TLDLength': 3,
-        'NoOfSubDomain': 5, 'HasObfuscation': 1, 'NoOfObfuscatedChar': 12,
+        'NoOfSubDomain': 5, 'HasObfuscation': 1,  
         'LetterRatioInURL': 0.72, 'DegitRatioInURL': 0.12, 'NoOfEqualsInURL': 2,
         'NoOfQMarkInURL': 1, 'NoOfAmpersandInURL': 1, 'SpacialCharRatioInURL': 0.16,
-        'LargestLineLength': 5200, 'HasTitle': 1, 'DomainTitleMatchScore': 20,
+        'LargestLineLength': 5200, 'HasTitle': 1,  
         'URLTitleMatchScore': 18, 'HasFavicon': 0, 'Robots': 0, 'IsResponsive': 0,
         'NoOfURLRedirect': 1, 'NoOfSelfRedirect': 0, 'HasDescription': 0,
         'NoOfPopup': 1, 'NoOfiFrame': 2, 'HasExternalFormSubmit': 1,
@@ -21,12 +24,12 @@ X_test = pd.DataFrame([
     
     # 1. Phishing Banking
     {
-        'IsHTTPS': 1, 'URLLength': 88, 'IsDomainIP': 0, 'URLSimilarityIndex': 50,
+        'URLLength': 88, 'IsDomainIP': 0, 'URLSimilarityIndex': 50,
         'CharContinuationRate': 0.55, 'TLDLegitimateProb': 0.20, 'TLDLength': 2,
-        'NoOfSubDomain': 6, 'HasObfuscation': 1, 'NoOfObfuscatedChar': 8,
+        'NoOfSubDomain': 6, 'HasObfuscation': 1,  
         'LetterRatioInURL': 0.78, 'DegitRatioInURL': 0.10, 'NoOfEqualsInURL': 3,
         'NoOfQMarkInURL': 2, 'NoOfAmpersandInURL': 2, 'SpacialCharRatioInURL': 0.12,
-        'LargestLineLength': 3800, 'HasTitle': 1, 'DomainTitleMatchScore': 15,
+        'LargestLineLength': 3800, 'HasTitle': 1,  
         'URLTitleMatchScore': 12, 'HasFavicon': 0, 'Robots': 0, 'IsResponsive': 0,
         'NoOfURLRedirect': 1, 'NoOfSelfRedirect': 0, 'HasDescription': 0,
         'NoOfPopup': 2, 'NoOfiFrame': 1, 'HasExternalFormSubmit': 1,
@@ -38,12 +41,12 @@ X_test = pd.DataFrame([
     
     # 2. Légitime E-commerce
     {
-        'IsHTTPS': 1, 'URLLength': 42, 'IsDomainIP': 0, 'URLSimilarityIndex': 85,
+        'URLLength': 42, 'IsDomainIP': 0, 'URLSimilarityIndex': 85,
         'CharContinuationRate': 0.18, 'TLDLegitimateProb': 0.48, 'TLDLength': 3,
-        'NoOfSubDomain': 2, 'HasObfuscation': 0, 'NoOfObfuscatedChar': 0,
+        'NoOfSubDomain': 2, 'HasObfuscation': 0,  
         'LetterRatioInURL': 0.85, 'DegitRatioInURL': 0.05, 'NoOfEqualsInURL': 1,
         'NoOfQMarkInURL': 1, 'NoOfAmpersandInURL': 0, 'SpacialCharRatioInURL': 0.10,
-        'LargestLineLength': 1200, 'HasTitle': 1, 'DomainTitleMatchScore': 88,
+        'LargestLineLength': 1200, 'HasTitle': 1,  
         'URLTitleMatchScore': 85, 'HasFavicon': 1, 'Robots': 1, 'IsResponsive': 1,
         'NoOfURLRedirect': 0, 'NoOfSelfRedirect': 0, 'HasDescription': 1,
         'NoOfPopup': 0, 'NoOfiFrame': 0, 'HasExternalFormSubmit': 0,
@@ -55,12 +58,12 @@ X_test = pd.DataFrame([
     
     # 3. Légitime Corporate
     {
-        'IsHTTPS': 1, 'URLLength': 28, 'IsDomainIP': 0, 'URLSimilarityIndex': 95,
+        'URLLength': 28, 'IsDomainIP': 0, 'URLSimilarityIndex': 95,
         'CharContinuationRate': 0.08, 'TLDLegitimateProb': 0.52, 'TLDLength': 3,
-        'NoOfSubDomain': 1, 'HasObfuscation': 0, 'NoOfObfuscatedChar': 0,
+        'NoOfSubDomain': 1, 'HasObfuscation': 0,  
         'LetterRatioInURL': 0.90, 'DegitRatioInURL': 0.02, 'NoOfEqualsInURL': 0,
         'NoOfQMarkInURL': 0, 'NoOfAmpersandInURL': 0, 'SpacialCharRatioInURL': 0.08,
-        'LargestLineLength': 780, 'HasTitle': 1, 'DomainTitleMatchScore': 95,
+        'LargestLineLength': 780, 'HasTitle': 1,  
         'URLTitleMatchScore': 92, 'HasFavicon': 1, 'Robots': 1, 'IsResponsive': 1,
         'NoOfURLRedirect': 0, 'NoOfSelfRedirect': 0, 'HasDescription': 1,
         'NoOfPopup': 0, 'NoOfiFrame': 0, 'HasExternalFormSubmit': 0,
@@ -81,7 +84,7 @@ legitimate_government = {
     'TLDLength': 3,
     'NoOfSubDomain': 1,
     'HasObfuscation': 0,
-    'NoOfObfuscatedChar': 0,
+     
     'LetterRatioInURL': 0.92,
     'DegitRatioInURL': 0.01,
     'NoOfEqualsInURL': 0,
@@ -90,7 +93,7 @@ legitimate_government = {
     'SpacialCharRatioInURL': 0.07,
     'LargestLineLength': 650,  # Code très propre
     'HasTitle': 1,
-    'DomainTitleMatchScore': 98,
+     
     'URLTitleMatchScore': 95,
     'HasFavicon': 1,
     'Robots': 1,
@@ -125,7 +128,7 @@ legitimate_education = {
     'TLDLength': 3,
     'NoOfSubDomain': 2,  # portal.university.edu
     'HasObfuscation': 0,
-    'NoOfObfuscatedChar': 0,
+     
     'LetterRatioInURL': 0.87,
     'DegitRatioInURL': 0.04,
     'NoOfEqualsInURL': 0,
@@ -134,7 +137,7 @@ legitimate_education = {
     'SpacialCharRatioInURL': 0.09,
     'LargestLineLength': 1100,
     'HasTitle': 1,
-    'DomainTitleMatchScore': 90,
+     
     'URLTitleMatchScore': 88,
     'HasFavicon': 1,
     'Robots': 1,
@@ -169,7 +172,7 @@ legitimate_saas = {
     'TLDLength': 3,
     'NoOfSubDomain': 2,  # app.startup.com
     'HasObfuscation': 0,
-    'NoOfObfuscatedChar': 0,
+     
     'LetterRatioInURL': 0.86,
     'DegitRatioInURL': 0.03,
     'NoOfEqualsInURL': 0,
@@ -178,7 +181,7 @@ legitimate_saas = {
     'SpacialCharRatioInURL': 0.11,
     'LargestLineLength': 1400,
     'HasTitle': 1,
-    'DomainTitleMatchScore': 85,
+     
     'URLTitleMatchScore': 82,
     'HasFavicon': 1,
     'Robots': 1,
@@ -213,7 +216,7 @@ legitimate_forum = {
     'TLDLength': 3,
     'NoOfSubDomain': 1,
     'HasObfuscation': 0,
-    'NoOfObfuscatedChar': 0,
+     
     'LetterRatioInURL': 0.80,
     'DegitRatioInURL': 0.10,  # IDs de posts
     'NoOfEqualsInURL': 1,
@@ -222,7 +225,7 @@ legitimate_forum = {
     'SpacialCharRatioInURL': 0.10,
     'LargestLineLength': 1600,
     'HasTitle': 1,
-    'DomainTitleMatchScore': 80,
+     
     'URLTitleMatchScore': 75,
     'HasFavicon': 1,
     'Robots': 1,
@@ -257,7 +260,7 @@ legitimate_banking = {
     'TLDLength': 3,
     'NoOfSubDomain': 2,  # online.bank.com
     'HasObfuscation': 0,
-    'NoOfObfuscatedChar': 0,
+     
     'LetterRatioInURL': 0.88,
     'DegitRatioInURL': 0.02,
     'NoOfEqualsInURL': 0,
@@ -266,7 +269,7 @@ legitimate_banking = {
     'SpacialCharRatioInURL': 0.10,
     'LargestLineLength': 800,  # Code sécurisé et propre
     'HasTitle': 1,
-    'DomainTitleMatchScore': 95,
+     
     'URLTitleMatchScore': 93,
     'HasFavicon': 1,
     'Robots': 1,
@@ -301,7 +304,7 @@ legitimate_personal_blog = {
     'TLDLength': 3,
     'NoOfSubDomain': 1,
     'HasObfuscation': 0,
-    'NoOfObfuscatedChar': 0,
+     
     'LetterRatioInURL': 0.83,
     'DegitRatioInURL': 0.07,
     'NoOfEqualsInURL': 1,
@@ -310,7 +313,7 @@ legitimate_personal_blog = {
     'SpacialCharRatioInURL': 0.10,
     'LargestLineLength': 1800,
     'HasTitle': 1,
-    'DomainTitleMatchScore': 70,
+     
     'URLTitleMatchScore': 68,
     'HasFavicon': 1,
     'Robots': 1,
@@ -334,3 +337,30 @@ legitimate_personal_blog = {
     'External_to_Self_ratio': 0.40,  # WordPress utilise CDNs
     'Code_density': 0.48
 }
+
+
+
+
+
+
+
+# All your examples
+examples = [
+    X_test.iloc[0].to_dict(),  # Phishing Crypto
+    X_test.iloc[1].to_dict(),  # Phishing Banking
+    X_test.iloc[2].to_dict(),  # Legit E-commerce
+    X_test.iloc[3].to_dict(),  # Legit Corporate
+    legitimate_government,
+    legitimate_education,
+    legitimate_saas,
+    legitimate_forum,
+    legitimate_banking,
+    legitimate_personal_blog
+]
+
+# Run predictions
+for i, example in enumerate(examples):
+    print(f"\nExample {i}:")
+    result = callModel(example)
+    print(result)
+    

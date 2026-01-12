@@ -316,10 +316,6 @@ def _load_model():
     return joblib.load("phishing_xgb.pkl")
 
 
-@lru_cache(maxsize=1)
-def _load_feature_order():
-    with open("feature_order.json") as f:
-        return json.load(f)
 
 
 def sanitize_for_json(data):
@@ -346,9 +342,9 @@ def callModel(features_dict):
     prediction = int(predictions[0])
     probability = float(probabilities[0])
 
-    print("\n--------------------------------------------------\n")
+    print("\n--------------------------------------------------")
     print(f"Prediction: {prediction}, Label: {label}, Probability: {probability}")
-    print("\n--------------------------------------------------\n")
+    print("\n--------------------------------------------------")
 
     return {
         "prediction": prediction,  

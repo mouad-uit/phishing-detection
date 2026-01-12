@@ -19,37 +19,6 @@ def index():
     return render_template("index.html")
 
 
-def validate_url(url: str):
-    """
-    Validate URL format.
-    Returns (is_valid, error_message)
-    """
-    if not url or not url.strip():
-        return False, "Veuillez saisir une URL."
-
-    url = url.strip()
-
-    # Add protocol if missing
-    if not url.startswith(("http://", "https://")):
-        url = "http://" + url
-
-    try:
-        parsed = urlparse(url)
-        
-        # Check if we have at least a netloc (domain)
-        if not parsed.netloc:
-            return False, "Format d'URL invalide. Veuillez entrer une URL valide (ex: https://www.example.com)"
-
-        # Check if netloc looks like a domain or IP
-        netloc = parsed.netloc.split(":")[0]  # Remove port if present
-        
-        # Basic domain/IP validation
-        if not (netloc.count(".") >= 1 or netloc.replace(".", "").replace(":", "").isdigit()):
-            return False, "Format d'URL invalide. Le domaine ou l'adresse IP est incorrect."
-
-        return True, ""
-    except Exception:
-        return False, "Format d'URL invalide. Veuillez entrer une URL valide (ex: https://www.example.com)"
 
 
 @app.route("/predict", methods=["POST"])
