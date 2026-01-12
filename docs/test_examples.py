@@ -1,52 +1,10 @@
-# 'IsHTTPS': 1 if true and 0 if false
-# 'URLLength':  url length
-# 'IsDomainIP':  is the url a domain name of ip, 0 if it's not an IP adress, else 1
-# 'URLSimilarityIndex':  ??
-# 'CharContinuationRate': 0.68, 
-# 'TLDLegitimateProb': 0.15, 
-# 'TLDLength': 3,
-# 'NoOfSubDomain': 5, 
-# 'HasObfuscation': 1, 
-# 'NoOfObfuscatedChar': 12,
-# 'LetterRatioInURL': 0.72, 
-# 'DegitRatioInURL': 0.12, 
-# 'NoOfEqualsInURL': 2,
-# 'NoOfQMarkInURL': 1, 
-# 'NoOfAmpersandInURL': 1, 
-# 'SpacialCharRatioInURL': 0.16,
-# 'LargestLineLength': 5200, 
-# 'HasTitle': 1, 
-# 'DomainTitleMatchScore': 20,
-# 'URLTitleMatchScore': 18, 
-# 'HasFavicon': 0, 
-# 'Robots': 0, 
-# 'IsResponsive': 0,
-# 'NoOfURLRedirect': 1, 
-# 'NoOfSelfRedirect': 0, 
-# 'HasDescription': 0,
-# 'NoOfPopup': 1, 
-# 'NoOfiFrame': 2, 
-# 'HasExternalFormSubmit': 1,
-# 'HasSocialNet': 0, 
-# 'HasSubmitButton': 1, 
-# 'HasHiddenFields': 1,
-# 'HasPasswordField': 1, 
-# 'Bank': 0, 
-# 'Pay': 0, 
-# 'Crypto': 1,
-# 'HasCopyrightInfo': 0, 
-# 'NoOfEmptyRef': 15, 
-# 'JS_to_CSS_ratio': 6.2,
-# 'External_to_Self_ratio': 0.88, 
-# 'Code_density': 0.92
-
 import pandas as pd
 
 # Création directe du DataFrame X_test
 X_test = pd.DataFrame([
     # 0. Phishing Crypto
     {
-        'IsHTTPS': 0, 'URLLength': 95, 'IsDomainIP': 0, #'URLSimilarityIndex': 45,
+        'IsHTTPS': 0, 'URLLength': 95, 'IsDomainIP': 0, 'URLSimilarityIndex': 45,
         'CharContinuationRate': 0.68, 'TLDLegitimateProb': 0.15, 'TLDLength': 3,
         'NoOfSubDomain': 5, 'HasObfuscation': 1, 'NoOfObfuscatedChar': 12,
         'LetterRatioInURL': 0.72, 'DegitRatioInURL': 0.12, 'NoOfEqualsInURL': 2,

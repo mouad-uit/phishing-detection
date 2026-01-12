@@ -225,6 +225,55 @@ def _safe_fetch_html(url):
         return ""
 
 
+def _html_advanced_features(html, domain):
+    """
+    Extract advanced HTML/JS/CSS features that were missing:
+    - HasCopyrightInfo
+    - NoOfEmptyRef
+    - JS_to_CSS_ratio
+    - External_to_Self_ratio
+    - Code_density
+    """
+    from urllib.parse import urlparse
+
+    features = {}
+
+    # 1️⃣ HasCopyrightInfo
+    features["HasCopyrightInfo"] = int(bool(re.search(r'©|copyright', html, re.IGNORECASE)))
+
+    # 2️⃣ NoOfEmptyRef
+    # Count <a href=""> or <a href="#"> links
+    features["NoOfEmptyRef"] = len(re.findall(r'<a\s+[^>]*href=["\']\s*(#|)["\']', html, re.IGNORECASE))
+
+    # 3️⃣ JS_to_CSS_ratio
+    js_len = sum(len(m.group(0)) for m in re.finditer(r'<script[^>]*>.*?</script>', html, re.DOTALL))
+    css_len = sum(len(m.group(0)) for m in re.finditer(r'<style[^>]*>.*?</style>', html, re.DOTALL))
+    # Avoid division by zero
+    features["JS_to_CSS_ratio"] = js_len / css_len if css_len > 0 else js_len
+
+    # 4️⃣ External_to_Self_ratio
+    # Count all <a href="..."> links and determine if they are external
+    all_links = re.findall(r'<a\s+[^>]*href=["\'](.*?)["\']', html, re.IGNORECASE)
+    external_links = 0
+    self_links = 0
+    for link in all_links:
+        parsed_link = urlparse(link)
+        if parsed_link.netloc and parsed_link.netloc.lower() != domain.lower():
+            external_links += 1
+        else:
+            self_links += 1
+    features["External_to_Self_ratio"] = (external_links / self_links) if self_links > 0 else external_links
+
+    # 5️⃣ Code_density
+    # Measure ratio of code (scripts/styles) vs total HTML length
+    total_len = len(html)
+    code_len = js_len + css_len
+    features["Code_density"] = code_len / total_len if total_len > 0 else 0
+
+    return features
+
+
+
 def _html_features(html, domain, url):
     features = {}
 
@@ -251,6 +300,8 @@ def _html_features(html, domain, url):
 
     features["LineOfCode"] = html.count("\n") + 1
     features["LargestLineLength"] = max((len(line) for line in html.split("\n")), default=0)
+
+    features.update(_html_advanced_features(html, domain))
 
     return features
 
@@ -284,16 +335,16 @@ def callModel(features_dict):
 
     X = np.array([[float(features_dict.get(f, 0)) for f in FEATURE_ORDER]])
 
-    prediction = int(model.predict(X)[0])
-    probability = float(model.predict_proba(X)[0][1])
-    label = "Phishing" if prediction == 1 else "Legitimate"
+    # prediction = int(model.predict(X)[0])
+    # probability = float(model.predict_proba(X)[0][1])
+    # label = "Phishing" if prediction == 0 else "Legitimate"
 
 
-    # probabilities = model.predict_proba(X)[:,1]
-    # predictions = (probabilities >= 0.20).astype(int)
-    # label = "Phishing" if predictions[0] == 0 else "Legitimate"
-    # probability = probabilities[0]
-    # prediction = predictions[0]
+    probabilities = model.predict_proba(X)[:,1]
+    predictions = (probabilities >= 0.20).astype(int)
+    label = "Phishing" if predictions[0] == 0 else "Legitimate"
+    prediction = int(predictions[0])
+    probability = float(probabilities[0])
 
     print("\n--------------------------------------------------\n")
     print(f"Prediction: {prediction}, Label: {label}, Probability: {probability}")

@@ -296,7 +296,7 @@
 
       // Display result
       function displayResult(result) {
-        const isPhishing = result.prediction === 1;
+        const isPhishing = result.label !== "Legitimate";
         const resultClass = isPhishing ? "result-danger" : "result-safe";
         const resultText = isPhishing 
           ? "Ce site est probablement <strong>phishing</strong>"
