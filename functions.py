@@ -9,59 +9,8 @@ from difflib import SequenceMatcher
 from urllib.parse import urlparse
 from functools import lru_cache
 
-from constants import KNOWN_LEGITIMATE_URLS, LEGITIMATE_TLDS
+from constants import KNOWN_LEGITIMATE_URLS, LEGITIMATE_TLDS, FEATURE_ORDER
 
-
-KNOWN_LEGITIMATE_URLS = [
-    "https://www.google.com",
-    "https://www.facebook.com",
-    "https://www.amazon.com",
-    "https://www.microsoft.com",
-    "https://www.apple.com",
-    # Ajoutez d'autres domaines légitimes selon votre besoin
-]
-
-
-FEATURE_ORDER = [
-    "URLLength",
-    "IsDomainIP",
-    "URLSimilarityIndex",
-    "CharContinuationRate",
-    "TLDLegitimateProb",
-    "TLDLength",
-    "NoOfSubDomain",
-    "HasObfuscation",
-    "LetterRatioInURL",
-    "DegitRatioInURL",
-    "NoOfEqualsInURL",
-    "NoOfQMarkInURL",
-    "NoOfAmpersandInURL",
-    "SpacialCharRatioInURL",
-    "LargestLineLength",
-    "HasTitle",
-    "URLTitleMatchScore",
-    "HasFavicon",
-    "Robots",
-    "IsResponsive",
-    "NoOfURLRedirect",
-    "NoOfSelfRedirect",
-    "HasDescription",
-    "NoOfPopup",
-    "NoOfiFrame",
-    "HasExternalFormSubmit",
-    "HasSocialNet",
-    "HasSubmitButton",
-    "HasHiddenFields",
-    "HasPasswordField",
-    "Bank",
-    "Pay",
-    "Crypto",
-    "HasCopyrightInfo",
-    "NoOfEmptyRef",
-    "JS_to_CSS_ratio",
-    "External_to_Self_ratio",
-    "Code_density"
-]
 
 
 # =========================
@@ -93,6 +42,99 @@ def validateAndNormalizeData(request):
 # 2. FEATURE EXTRACTION
 # =========================
 
+
+def _has_hidden_fields(html):
+    try:
+        return int(bool(re.search(r'<input[^>]+type=["\']hidden["\']', html, re.IGNORECASE)))
+    except Exception:
+        return 0
+
+
+def _has_social_net(html):
+    SOCIAL_DOMAINS = [
+        "facebook.com", "twitter.com", "linkedin.com", "instagram.com",
+        "pinterest.com", "tiktok.com", "snapchat.com", "reddit.com"
+    ]
+    try:
+        return int(any(domain in html for domain in SOCIAL_DOMAINS))
+    except Exception:
+        return 0
+
+
+
+def _has_external_form_submit(html, url):
+    from urllib.parse import urlparse
+    try:
+        domain = urlparse(url).netloc.lower()
+        matches = re.findall(r'<form[^>]+action=["\'](.*?)["\']', html, re.IGNORECASE)
+        for action in matches:
+            action_domain = urlparse(action).netloc.lower()
+            if action_domain and action_domain != domain:
+                return 1
+        return 0
+    except Exception:
+        return 0
+
+
+def _count_redirects(url):
+    """
+    Retourne (total_redirects, self_redirects)
+    """
+    try:
+        r = requests.get(url, timeout=5, allow_redirects=True)
+        total_redirects = len(r.history)
+        self_redirects = sum(1 for resp in r.history if resp.url.rstrip('/') == url.rstrip('/'))
+
+        return total_redirects, self_redirects
+    except Exception:
+        return 0, 0
+
+
+
+def _is_responsive(html):
+    try:
+        if '<meta name="viewport"' in html:
+            return 1
+        if '@media' in html:
+            return 1
+        return 0
+    except Exception:
+        return 0
+
+
+
+def _has_robots_txt(url):
+    from urllib.parse import urljoin
+    try:
+        robots_url = urljoin(url, "/robots.txt")
+        r = requests.get(robots_url, timeout=5)
+        return int(r.status_code == 200)
+    except Exception:
+        return 0
+
+
+def _url_title_match_score(html, url):
+    """
+    Compare l'URL et le <title> de la page.
+    Retourne une valeur de similarité entre 0 et 1.
+    """
+    from difflib import SequenceMatcher
+    from urllib.parse import urlparse
+
+    try:
+        # Extraire le contenu de <title>
+        match = re.search(r"<title>(.*?)</title>", html, re.IGNORECASE | re.DOTALL)
+        if not match:
+            return 0.0
+        title = match.group(1).strip().lower()
+
+        # Extraire le domaine de l'URL
+        domain = urlparse(url).netloc.lower()
+
+        # Similarité
+        return SequenceMatcher(None, domain, title).ratio()
+    except Exception:
+        return 0.0
 
 
 def _tld_legitimate_prob(url):
@@ -146,7 +188,7 @@ def get_url_data(url):
     specials = len(url) - letters - digits
 
     features["LetterRatioInURL"] = letters / len(url)
-    features["DegitRatioInURL"] = digits / len(url)
+    features["DigitRatioInURL"] = digits / len(url)
     features["SpacialCharRatioInURL"] = specials / len(url)
 
     features["HasObfuscation"] = int("%" in url or "@" in url)
@@ -158,7 +200,7 @@ def get_url_data(url):
     # ---- Placeholder HTML features (to be improved later) ----
     html = _safe_fetch_html(url)
 
-    features.update(_html_features(html, domain))
+    features.update(_html_features(html, domain, url))
 
     return features
 
@@ -183,17 +225,25 @@ def _safe_fetch_html(url):
         return ""
 
 
-def _html_features(html, domain):
+def _html_features(html, domain, url):
     features = {}
 
     features["HasTitle"] = int("<title>" in html)
+    features["URLTitleMatchScore"] = _url_title_match_score(html, url)
     features["HasFavicon"] = int("favicon" in html)
-    features["HasDescription"] = int("meta name=\"description\"" in html)
-    features["HasPasswordField"] = int("type=\"password\"" in html)
-    features["HasSubmitButton"] = int("type=\"submit\"" in html)
-
-    features["NoOfiFrame"] = html.count("<iframe")
+    features["Robots"] = _has_robots_txt(url)
+    features["IsResponsive"] = _is_responsive(html)
+    redirects, self_redirects = _count_redirects(url)
+    features["NoOfURLRedirect"] = redirects
+    features["NoOfSelfRedirect"] = self_redirects
+    features["HasDescription"] = int('meta name="description"' in html)
     features["NoOfPopup"] = html.count("window.open")
+    features["NoOfiFrame"] = html.count("<iframe")
+    features["HasExternalFormSubmit"] = _has_external_form_submit(html, url)
+    features["HasSocialNet"] = _has_social_net(html)
+    features["HasSubmitButton"] = int('type="submit"' in html)
+    features["HasHiddenFields"] = _has_hidden_fields(html)
+    features["HasPasswordField"] = int('type="password"' in html)
 
     features["Bank"] = int(any(k in html for k in ["bank", "credit", "account"]))
     features["Pay"] = int(any(k in html for k in ["pay", "payment", "visa", "mastercard"]))
@@ -203,6 +253,7 @@ def _html_features(html, domain):
     features["LargestLineLength"] = max((len(line) for line in html.split("\n")), default=0)
 
     return features
+
 
 
 # =========================
@@ -235,7 +286,8 @@ def callModel(features_dict):
 
     prediction = int(model.predict(X)[0])
     probability = float(model.predict_proba(X)[0][1])
-    label = "Phishing" if prediction == 1 else "Legitimate",
+    label = "Phishing" if prediction == 1 else "Legitimate"
+
 
     # probabilities = model.predict_proba(X)[:,1]
     # predictions = (probabilities >= 0.20).astype(int)

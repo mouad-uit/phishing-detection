@@ -1,3 +1,46 @@
+FEATURE_ORDER = [
+    "URLLength",
+    "IsDomainIP",
+    "URLSimilarityIndex",
+    "CharContinuationRate",
+    "TLDLegitimateProb",
+    "TLDLength",
+    "NoOfSubDomain",
+    "HasObfuscation",
+    "LetterRatioInURL",
+    "DegitRatioInURL",
+    "NoOfEqualsInURL",
+    "NoOfQMarkInURL",
+    "NoOfAmpersandInURL",
+    "SpacialCharRatioInURL",
+    "LargestLineLength",
+    "HasTitle",
+    "URLTitleMatchScore",
+    "HasFavicon",
+    "Robots",
+    "IsResponsive",
+    "NoOfURLRedirect",
+    "NoOfSelfRedirect",
+    "HasDescription",
+    "NoOfPopup",
+    "NoOfiFrame",
+    "HasExternalFormSubmit",
+    "HasSocialNet",
+    "HasSubmitButton",
+    "HasHiddenFields",
+    "HasPasswordField",
+    "Bank",
+    "Pay",
+    "Crypto",
+    "HasCopyrightInfo",
+    "NoOfEmptyRef",
+    "JS_to_CSS_ratio",
+    "External_to_Self_ratio",
+    "Code_density"
+]
+
+
+
 # Liste de TLD considérés comme légitimes / très populaires
 LEGITIMATE_TLDS = {
     "com": 1.0,
